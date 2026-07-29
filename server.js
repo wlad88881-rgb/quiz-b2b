@@ -856,6 +856,8 @@ io.on('connection', (socket) => {
 
 async function seedLabs() {
   await db.update((d) => {
+    // Сначала убеждаемся, что объект labs существует
+    if (!d.labs) d.labs = {};
     SEED_LABS.forEach(l => { d.labs[l.id] = l; });
   });
   console.log(`[labs] Синхронизировано тренажёров: ${SEED_LABS.length}`);
