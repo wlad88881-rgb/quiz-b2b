@@ -3,271 +3,272 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Тестирование учеников</title>
+  <title>Тестирование для бизнеса</title>
   <link rel="stylesheet" href="/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .auth-screen { max-width: 500px; margin: 40px auto; }
+    .auth-screen .card { padding: 30px; }
+    .auth-switch { text-align: center; margin-top: 16px; font-size: 14px; }
+    .auth-switch a { color: #F07C00; cursor: pointer; font-weight: 600; text-decoration: underline; }
+    .auth-screen input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    .auth-screen .error { color: #d64545; margin-top: 8px; display: none; text-align: center; }
+    .auth-screen h2 { text-align: center; margin-bottom: 20px; }
+    .plan-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #e6f4ea; color: #2e9e4f; }
+    .plan-badge.pro { background: #fdeaea; color: #d64545; }
+  </style>
 </head>
 <body>
 
 <header class="brand-header">
   <div class="brand-mark">ERG</div>
   <div class="brand-text">
-    <div class="brand-title">ERG Corporate University</div>
-    <div class="brand-subtitle">Управление тестированием</div>
-  </div>
-  <!-- Переключатель языка в шапке -->
-  <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-    <button onclick="setLang('ru')" style="background: none; border: 1px solid white; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">RU</button>
-    <button onclick="setLang('kz')" style="background: none; border: 1px solid white; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">KZ</button>
+    <div class="brand-title">B2B Тестирование</div>
+    <div class="brand-subtitle">Управление тестированием для компаний</div>
   </div>
 </header>
 
 <div class="container">
-  <!-- Экран входа в панель преподавателя -->
-  <div id="login-screen" class="card" style="max-width: 400px; margin: 0 auto 20px auto; text-align: center;">
-    <h2>Вход в панель управления</h2>
-    <p class="muted">Введите пароль для доступа</p>
-    <input type="password" id="admin-password" placeholder="Введите пароль" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px;">
-    <button class="btn" onclick="loginAdmin()" style="width: 100%;">Войти</button>
-    <div id="login-error" class="error" style="display: none; margin-top: 10px;">Неверный пароль</div>
-  </div>
-
-  <!-- Вкладки -->
-  <div class="tabs">
-    <button class="tab-btn active" id="tab-btn-tests" onclick="switchTab('tests')">📚 <span id="lbl-tests">Тесты</span></button>
-    <button class="tab-btn" id="tab-btn-labs" onclick="switchTab('labs')">🧪 <span id="lbl-labs">Тренажёры</span></button>
-    <button class="tab-btn" id="tab-btn-stats" onclick="switchTab('stats')">📊 <span id="lbl-stats">Статистика</span></button>
-  </div>
-
-  <!-- Основной экран -->
-  <div id="screen-main">
-    <div id="tab-tests" style="display:block">
-      <div class="row" style="margin-bottom:16px; gap:12px; flex-wrap:wrap;">
-        <button class="btn" onclick="showEditor()"><span id="lbl-new-test">+ Новый тест</span></button>
-        <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;" onchange="importFromExcel()">
-        <button class="btn outline" onclick="document.getElementById('import-file').click()"><span id="lbl-import-excel">Импорт Excel</span></button>
-        <button class="btn outline" onclick="window.location.href='/api/import-template'"><span id="lbl-template">Шаблон Excel</span></button>
-      </div>
-      <h2><span id="lbl-my-tests">Мои тесты</span></h2>
-      <div id="tests-list"></div>
-    </div>
-
-    <div id="tab-labs" style="display:none">
-      <div class="row" style="margin-bottom:16px;">
-        <button class="btn" onclick="showLabEditor()"><span id="lbl-new-lab">+ Новый тренажёр</span></button>
-      </div>
-      <h2><span id="lbl-my-labs">Мои тренажёры</span></h2>
-      <div id="labs-list"></div>
-    </div>
-
-    <div id="tab-stats" style="display:none">
-      <h2><span id="lbl-stats-title">Статистика</span></h2>
-      <div id="stats-tests-list"></div>
-    </div>
-  </div>
-
-  <!-- Редактор теста -->
-  <div id="screen-editor" style="display:none;">
-    <div class="row between" style="margin-bottom:16px;">
-      <h2 id="editor-title" style="margin:0;"><span id="lbl-editor-title">Новый тест</span></h2>
-      <button class="btn outline small" onclick="showList()"><span id="lbl-cancel">Отмена</span></button>
-    </div>
-    <input type="text" id="test-title" placeholder="Название теста">
-    <div id="questions-container"></div>
-    <button class="btn" onclick="saveTest()" style="margin-top:12px;"><span id="lbl-save-test">Сохранить тест</span></button>
-    <div id="save-error" class="error"></div>
-  </div>
-
-  <!-- Редактор тренажёра -->
-  <div id="screen-lab-editor" style="display:none;">
-    <div class="row between" style="margin-bottom:16px;">
-      <h2 id="lab-editor-title" style="margin:0;"><span id="lbl-lab-editor-title">Новый тренажёр</span></h2>
-      <button class="btn outline small" onclick="showList(); switchTab('labs')"><span id="lbl-cancel">Отмена</span></button>
-    </div>
-    <input type="text" id="lab-title-input" placeholder="Название тренажёра">
-    <textarea id="lab-intro-input" rows="3" placeholder="Вводный текст для ученика"></textarea>
-    <div id="faults-container"></div>
-    <button class="btn" onclick="saveLab()" style="margin-top:12px;"><span id="lbl-save-lab">Сохранить тренажёр</span></button>
-    <div id="lab-save-error" class="error"></div>
-  </div>
-
-  <!-- Экран сессии -->
-  <div id="screen-session" style="display:none;">
-    <div class="row between" style="margin-bottom:16px;">
-      <div class="row">
-        <button class="btn outline small" onclick="showList()">← Назад к тестам</button>
-        <h2 id="session-title" style="margin:0; margin-left:16px;">Сессия</h2>
-      </div>
-      <div class="row">
-        <span id="session-status" class="badge live">Идёт тестирование</span>
-        <button class="btn danger" id="end-session-btn" onclick="endSession()">Завершить сессию</button>
-      </div>
-    </div>
+  <!-- Экран входа / Регистрации -->
+  <div id="auth-screen" class="auth-screen">
     <div class="card">
-      <div class="row between">
-        <div>
-          <div class="muted">Код для учеников</div>
-          <div class="code-big" id="session-code"></div>
-        </div>
-        <div class="qr-box">
-          <img id="qr-img" style="width:240px;height:240px; border-radius:12px;">
-          <div class="muted" style="font-size:11px;">Ссылка</div>
-          <div id="session-link" style="font-size:12px;word-break:break-all;max-width:200px;"></div>
-        </div>
-        <div>
-          <button class="btn outline small" onclick="exportResults()">📥 Экспорт Excel</button>
-        </div>
+      <h2 id="auth-title">Вход в систему</h2>
+      <div id="auth-error" class="error">Ошибка</div>
+      
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-password" placeholder="Пароль">
+      <input type="text" id="auth-name" placeholder="Название компании" style="display:none;">
+      
+      <button class="btn" onclick="submitAuth()" id="auth-btn" style="width:100%;">Войти</button>
+      
+      <div class="auth-switch" id="auth-switch">
+        Нет аккаунта? <a onclick="toggleAuthMode()">Зарегистрироваться</a>
       </div>
     </div>
-
-    <!-- Таблица учеников -->
-    <div id="no-participants" class="muted" style="text-align:center;padding:40px;">Пока никто не присоединился.</div>
-    <table id="results-table" style="display:none; margin-top:20px;">
-      <thead>
-        <tr>
-          <th>Участник</th>
-          <th>Статус</th>
-          <th>Результат</th>
-        </tr>
-      </thead>
-      <tbody id="results-body"></tbody>
-    </table>
   </div>
 
-  <!-- Экран статистики -->
-  <div id="screen-stats" style="display:none;">
-    <div class="row between" style="margin-bottom:16px;">
-      <h2 id="stats-test-title" style="margin:0;"><span id="lbl-stats-test-title">Статистика</span></h2>
-      <div class="row">
-        <button class="btn outline small" onclick="showList(); switchTab('stats')"><span id="lbl-back">← Назад</span></button>
-        <button class="btn danger small" onclick="clearTestHistory()" id="clear-history-btn"><span id="lbl-clear-history">Очистить историю</span></button>
+  <!-- Основной экран (скрыт, пока не войдут) -->
+  <div id="screen-main" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div>
+        <span style="font-weight:700; font-size:18px;" id="company-display">Компания</span>
+        <span class="plan-badge" id="plan-badge">Free</span>
+      </div>
+      <button class="btn outline small" onclick="logout()">Выход</button>
+    </div>
+
+    <!-- Вкладки -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-btn-tests" onclick="switchTab('tests')">📚 Тесты</button>
+      <button class="tab-btn" id="tab-btn-labs" onclick="switchTab('labs')">🧪 Тренажёры</button>
+      <button class="tab-btn" id="tab-btn-stats" onclick="switchTab('stats')">📊 Статистика</button>
+    </div>
+
+    <!-- Экран списков -->
+    <div id="screen-list">
+      <div id="tab-tests" style="display:block">
+        <div class="row" style="margin-bottom:16px; gap:12px; flex-wrap:wrap;">
+          <button class="btn" onclick="showEditor()">+ Новый тест</button>
+          <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;" onchange="importFromExcel()">
+          <button class="btn outline" onclick="document.getElementById('import-file').click()">Импорт Excel</button>
+          <button class="btn outline" onclick="window.location.href='/api/import-template'">Шаблон Excel</button>
+        </div>
+        <h2>Мои тесты</h2>
+        <div id="tests-list"></div>
+      </div>
+
+      <div id="tab-labs" style="display:none">
+        <div class="row" style="margin-bottom:16px;">
+          <button class="btn" onclick="showLabEditor()">+ Новый тренажёр</button>
+        </div>
+        <h2>Мои тренажёры</h2>
+        <div id="labs-list"></div>
+      </div>
+
+      <div id="tab-stats" style="display:none">
+        <h2>Статистика</h2>
+        <div id="stats-tests-list"></div>
       </div>
     </div>
-    <h3>Сессии</h3>
-    <div id="stats-no-sessions" class="muted" style="display:none;padding:20px;">По этому тесту ещё нет завершённых сессий.</div>
-    <table id="stats-sessions-table">
-      <thead><tr><th>Дата</th><th>Участников</th><th>Завершили</th><th>Средний балл</th></tr></thead>
-      <tbody id="stats-sessions-body"></tbody>
-    </table>
-    <h3>График успеваемости</h3>
-    <canvas id="stats-chart" style="display:none;"></canvas>
-    <div id="stats-chart-empty" style="display:none;">Нужно минимум 2 завершённые сессии для графика.</div>
-    <h3>Вопросы</h3>
-    <div id="stats-questions-list"></div>
+
+    <!-- Редактор теста -->
+    <div id="screen-editor" style="display:none;">
+      <div class="row between" style="margin-bottom:16px;">
+        <h2 id="editor-title" style="margin:0;">Новый тест</h2>
+        <button class="btn outline small" onclick="showList()">Отмена</button>
+      </div>
+      <input type="text" id="test-title" placeholder="Название теста">
+      <div id="questions-container"></div>
+      <button class="btn" onclick="saveTest()" style="margin-top:12px;">Сохранить тест</button>
+      <div id="save-error" class="error"></div>
+    </div>
+
+    <!-- Редактор тренажёра -->
+    <div id="screen-lab-editor" style="display:none;">
+      <div class="row between" style="margin-bottom:16px;">
+        <h2 id="lab-editor-title" style="margin:0;">Новый тренажёр</h2>
+        <button class="btn outline small" onclick="showList(); switchTab('labs')">Отмена</button>
+      </div>
+      <input type="text" id="lab-title-input" placeholder="Название тренажёра">
+      <textarea id="lab-intro-input" rows="3" placeholder="Вводный текст для ученика"></textarea>
+      <div id="faults-container"></div>
+      <button class="btn" onclick="saveLab()" style="margin-top:12px;">Сохранить тренажёр</button>
+      <div id="lab-save-error" class="error"></div>
+    </div>
+
+    <!-- Экран сессии -->
+    <div id="screen-session" style="display:none;">
+      <div class="row between" style="margin-bottom:16px;">
+        <div class="row">
+          <button class="btn outline small" onclick="showList()">← Назад к тестам</button>
+          <h2 id="session-title" style="margin:0; margin-left:16px;">Сессия</h2>
+        </div>
+        <div class="row">
+          <span id="session-status" class="badge live">Идёт тестирование</span>
+          <button class="btn danger" id="end-session-btn" onclick="endSession()">Завершить сессию</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row between">
+          <div>
+            <div class="muted">Код для учеников</div>
+            <div class="code-big" id="session-code"></div>
+          </div>
+          <div class="qr-box">
+            <img id="qr-img" style="width:140px;height:140px; border-radius:12px;">
+            <div class="muted" style="font-size:11px;">Ссылка</div>
+            <div id="session-link" style="font-size:12px;word-break:break-all;max-width:200px;"></div>
+          </div>
+          <div>
+            <button class="btn outline small" onclick="exportResults()">📥 Экспорт Excel</button>
+          </div>
+        </div>
+      </div>
+      <div id="no-participants" class="muted" style="text-align:center;padding:40px;">Пока никто не присоединился.</div>
+      <table id="results-table" style="display:none; margin-top:20px;">
+        <thead><tr><th>Участник</th><th>Статус</th><th>Результат</th></tr></thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Экран статистики -->
+    <div id="screen-stats" style="display:none;">
+      <div class="row between" style="margin-bottom:16px;">
+        <h2 id="stats-test-title" style="margin:0;">Статистика</h2>
+        <button class="btn outline small" onclick="showList(); switchTab('stats')">← Назад</button>
+      </div>
+      <h3>Сессии</h3>
+      <div id="stats-no-sessions" class="muted" style="display:none;padding:20px;">По этому тесту ещё нет завершённых сессий.</div>
+      <table id="stats-sessions-table">
+        <thead><tr><th>Дата</th><th>Участников</th><th>Завершили</th><th>Средний балл</th></tr></thead>
+        <tbody id="stats-sessions-body"></tbody>
+      </table>
+      <h3>График успеваемости</h3>
+      <canvas id="stats-chart" style="display:none;"></canvas>
+      <div id="stats-chart-empty" style="display:none;">Нужно минимум 2 завершённые сессии для графика.</div>
+      <h3>Вопросы</h3>
+      <div id="stats-questions-list"></div>
+    </div>
   </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/teacher.js"></script>
-
-<!-- Переводы и логика входа -->
 <script>
-  const translations = {
-    ru: {
-      testsTab: 'Тесты',
-      labsTab: 'Тренажёры',
-      statsTab: 'Статистика',
-      btnNewTest: '+ Новый тест',
-      btnImportExcel: 'Импорт Excel',
-      btnTemplate: 'Шаблон Excel',
-      myTests: 'Мои тесты',
-      myLabs: 'Мои тренажёры',
-      statsTitle: 'Статистика',
-      newTest: 'Новый тест',
-      btnCancel: 'Отмена',
-      btnSaveTest: 'Сохранить тест',
-      newLab: 'Новый тренажёр',
-      btnSaveLab: 'Сохранить тренажёр',
-      statsTestTitle: 'Статистика',
-      btnBack: '← Назад',
-      btnClearHistory: 'Очистить историю'
-    },
-    kz: {
-      testsTab: 'Тесттер',
-      labsTab: 'Жаттықтырғыштар',
-      statsTab: 'Статистика',
-      btnNewTest: '+ Жаңа тест',
-      btnImportExcel: 'Excel-ден импорттау',
-      btnTemplate: 'Excel үлгісі',
-      myTests: 'Менің тесттерім',
-      myLabs: 'Менің жаттықтырғыштарым',
-      statsTitle: 'Статистика',
-      newTest: 'Жаңа тест',
-      btnCancel: 'Болдырмау',
-      btnSaveTest: 'Тестті сақтау',
-      newLab: 'Жаңа жаттықтырғыш',
-      btnSaveLab: 'Жаттықтырғышты сақтау',
-      statsTestTitle: 'Статистика',
-      btnBack: '← Артқа',
-      btnClearHistory: 'Тарихты тазарту'
-    }
-  };
+  let isRegisterMode = false;
+  let currentCompanyId = null;
+  let currentPlan = 'free';
 
-  let currentLang = 'ru';
-  function t(key) { return translations[currentLang][key] || key; }
-
-  function applyTranslations() {
-    document.getElementById('lbl-tests').textContent = t('testsTab');
-    document.getElementById('lbl-labs').textContent = t('labsTab');
-    document.getElementById('lbl-stats').textContent = t('statsTab');
-    document.getElementById('lbl-new-test').textContent = t('btnNewTest');
-    document.getElementById('lbl-import-excel').textContent = t('btnImportExcel');
-    document.getElementById('lbl-template').textContent = t('btnTemplate');
-    document.getElementById('lbl-my-tests').textContent = t('myTests');
-    document.getElementById('lbl-new-lab').textContent = t('btnNewTest');
-    document.getElementById('lbl-my-labs').textContent = t('myLabs');
-    document.getElementById('lbl-stats-title').textContent = t('statsTitle');
-    document.getElementById('lbl-editor-title').textContent = t('newTest');
-    document.getElementById('lbl-cancel').textContent = t('btnCancel');
-    document.getElementById('lbl-save-test').textContent = t('btnSaveTest');
-    document.getElementById('lbl-lab-editor-title').textContent = t('newLab');
-    document.getElementById('lbl-save-lab').textContent = t('btnSaveLab');
-    document.getElementById('lbl-stats-test-title').textContent = t('statsTestTitle');
-    document.getElementById('lbl-back').textContent = t('btnBack');
-    document.getElementById('lbl-clear-history').textContent = t('btnClearHistory');
+  function toggleAuthMode() {
+    isRegisterMode = !isRegisterMode;
+    document.getElementById('auth-title').textContent = isRegisterMode ? 'Регистрация компании' : 'Вход в систему';
+    document.getElementById('auth-btn').textContent = isRegisterMode ? 'Зарегистрироваться' : 'Войти';
+    document.getElementById('auth-switch').innerHTML = isRegisterMode 
+      ? 'Есть аккаунт? <a onclick="toggleAuthMode()">Войти</a>'
+      : 'Нет аккаунта? <a onclick="toggleAuthMode()">Зарегистрироваться</a>';
+    document.getElementById('auth-name').style.display = isRegisterMode ? 'block' : 'none';
+    document.getElementById('auth-error').style.display = 'none';
   }
 
-  window.setLang = function(lang) {
-    currentLang = lang;
-    applyTranslations();
-    const url = new URL(window.location);
-    url.searchParams.set('lang', lang);
-    window.history.replaceState({}, '', url.toString());
-  };
-
-  document.addEventListener('DOMContentLoaded', applyTranslations);
-
-  // ЛОГИКА ВХОДА
-  async function loginAdmin() {
-    const pass = document.getElementById('admin-password').value.trim();
-    const errorEl = document.getElementById('login-error');
+  async function submitAuth() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value.trim();
+    const name = document.getElementById('auth-name').value.trim();
+    const errorEl = document.getElementById('auth-error');
     errorEl.style.display = 'none';
-    if (!pass) return;
 
-    const res = await fetch('/api/login', {
+    if (!email || !password) {
+      errorEl.textContent = 'Заполните email и пароль';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    const endpoint = isRegisterMode ? '/api/register' : '/api/login';
+    const body = isRegisterMode ? { email, password, name } : { email, password };
+
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pass })
+      body: JSON.stringify(body)
     });
 
-    if (res.ok) {
-      localStorage.setItem('adminAuth', 'ok');
-      location.reload();
-    } else {
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Ошибка';
       errorEl.style.display = 'block';
+      return;
     }
+
+    currentCompanyId = data.companyId;
+    localStorage.setItem('b2bCompanyId', data.companyId);
+    localStorage.setItem('b2bEmail', data.email);
+    localStorage.setItem('b2bPlan', data.plan);
+
+    if (isRegisterMode) {
+      alert('Компания зарегистрирована! Теперь войдите в систему.');
+      toggleAuthMode();
+      return;
+    }
+
+    // Успешный вход
+    enterApp();
   }
 
+  function enterApp() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('screen-main').style.display = 'block';
+    document.getElementById('company-display').textContent = localStorage.getItem('b2bEmail') || 'Компания';
+    
+    currentPlan = localStorage.getItem('b2bPlan') || 'free';
+    const badge = document.getElementById('plan-badge');
+    badge.textContent = currentPlan === 'pro' ? 'Pro' : 'Free';
+    badge.className = 'plan-badge' + (currentPlan === 'pro' ? ' pro' : '');
+    
+    if (typeof loadTestsList === 'function') loadTestsList();
+  }
+
+  function logout() {
+    localStorage.removeItem('b2bCompanyId');
+    localStorage.removeItem('b2bEmail');
+    localStorage.removeItem('b2bPlan');
+    location.reload();
+  }
+
+  // Автоматический вход при загрузке
   document.addEventListener('DOMContentLoaded', async () => {
-    const isAuth = localStorage.getItem('adminAuth');
-    if (isAuth === 'ok') {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('screen-main').style.display = 'block';
-      if (typeof loadTestsList === 'function') loadTestsList();
-    } else {
-      document.getElementById('login-screen').style.display = 'block';
-      document.getElementById('screen-main').style.display = 'none';
+    const savedId = localStorage.getItem('b2bCompanyId');
+    if (savedId) {
+      const res = await fetch('/api/me', {
+        headers: { 'x-company-id': savedId }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('b2bPlan', data.plan);
+        enterApp();
+        return;
+      }
     }
+    document.getElementById('auth-screen').style.display = 'block';
   });
 </script>
 </body>
