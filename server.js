@@ -7,7 +7,7 @@ const XLSX = require('xlsx');
 const multer = require('multer');
 const { customAlphabet } = require('nanoid');
 const { Server } = require('socket.io');
-const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('./db');
 const { SEED_LABS } = require('./labs-content');
 
@@ -46,7 +46,10 @@ function getBaseUrl() {
 
 // ==================== B2B: АВТОРИЗАЦИЯ И ТАРИФЫ ====================
 
-// Проверка авторизации
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
 function checkAuth(req, res, next) {
   const companyId = req.headers['x-company-id'];
   if (!companyId) {
@@ -62,7 +65,6 @@ function checkAuth(req, res, next) {
   next();
 }
 
-// Проверка тарифных лимитов
 function checkPlanLimits(req, res, next) {
   const company = req.company;
   const data = db.load();
@@ -75,14 +77,12 @@ function checkPlanLimits(req, res, next) {
   
   const limits = planLimits[company.plan] || planLimits.free;
   
-  // Если создаётся тест, проверяем лимит тестов
   if (req.method === 'POST' && req.path === '/api/tests') {
     if (totalTests >= limits.tests) {
       return res.status(403).json({ error: `Достигнут лимит бесплатного тарифа (макс. ${limits.tests} тестов). Перейдите на Pro.` });
     }
   }
   
-  // Если создаётся сессия, проверяем лимит сессий для этого теста
   if (req.method === 'POST' && (req.path === '/api/sessions' || req.path === '/api/lab-sessions')) {
     const testId = req.body.testId || req.body.labId;
     if (testId) {
@@ -111,14 +111,14 @@ app.post('/api/register', async (req, res) => {
   }
   
   const id = companyIdGen();
-  const hash = await bcrypt.hash(password.trim(), 10);
+  const hash = hashPassword(password.trim());
   
   data.companies[id] = {
     id,
     email: email.trim(),
     name: name ? name.trim() : 'Моя компания',
     passwordHash: hash,
-    plan: 'free', // По умолчанию free
+    plan: 'free',
     registeredAt: Date.now()
   };
   
@@ -138,8 +138,8 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Неверная почта или пароль' });
   }
   
-  const valid = await bcrypt.compare(password.trim(), company.passwordHash);
-  if (!valid) {
+  const hash = hashPassword(password.trim());
+  if (hash !== company.passwordHash) {
     return res.status(401).json({ error: 'Неверная почта или пароль' });
   }
   
@@ -158,8 +158,6 @@ app.get('/api/plan', checkAuth, (req, res) => {
 });
 
 app.put('/api/upgrade', checkAuth, async (req, res) => {
-  // В реальном проекте здесь будет интеграция с платежным шлюзом (Stripe / ЮKassa)
-  // Для демо просто переключаем тариф
   await db.update((d) => {
     if (d.companies[req.companyId]) {
       d.companies[req.companyId].plan = 'pro';
@@ -168,7 +166,7 @@ app.put('/api/upgrade', checkAuth, async (req, res) => {
   res.json({ ok: true, plan: 'pro' });
 });
 
-// ==================== ТЕСТЫ (B2B версия) ====================
+// ==================== ТЕСТЫ ====================
 
 app.get('/api/tests', checkAuth, (req, res) => {
   const data = db.load();
@@ -236,8 +234,6 @@ app.delete('/api/tests/:id', checkAuth, async (req, res) => {
   });
   res.json({ ok: true });
 });
-
-// ==================== СТАТИСТИКА ====================
 
 app.get('/api/tests/:id/stats', checkAuth, (req, res) => {
   const data = db.load();
@@ -471,66 +467,6 @@ app.get('/api/sessions/:code/export', checkAuth, (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="results_${req.params.code}.xlsx"`);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.send(buf);
-});
-
-// ==================== ИМПОРТ И ШАБЛОНЫ ====================
-
-app.get('/api/import-template', checkAuth, (req, res) => {
-  const headers = ['Вопрос', 'Вариант 1', 'Вариант 2', 'Вариант 3', 'Вариант 4', 'Вариант 5', 'Правильные (номера через запятую)'];
-  const example1 = ['Какая муфта применяется во избежание поломок деталей механизма из-за перегрузок?', 'Компенсирующая муфта', 'Жёсткая муфта', 'Предохранительная муфта', 'Обгонная муфта', '', '3'];
-  const example2 = ['Выберите чётные числа', '1', '2', '3', '4', '', '2,4'];
-  const ws = XLSX.utils.aoa_to_sheet([headers, example1, example2]);
-  ws['!cols'] = [{ wch: 45 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 30 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Вопросы');
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-  res.setHeader('Content-Disposition', 'attachment; filename="shablon_voprosov.xlsx"');
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.send(buf);
-});
-
-app.post('/api/import-questions', checkAuth, upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
-  let rows;
-  try {
-    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-  } catch (e) {
-    return res.status(400).json({ error: 'Не удалось прочитать файл. Убедитесь, что это .xlsx или .xls' });
-  }
-  if (rows.length < 2) {
-    return res.status(400).json({ error: 'В файле нет вопросов. Заполните строки под заголовком.' });
-  }
-  const questions = [];
-  const skipped = [];
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || row.every(c => String(c).trim() === '')) continue;
-    const text = String(row[0] || '').trim();
-    const options = [];
-    for (let c = 1; c <= 5; c++) {
-      const val = String(row[c] || '').trim();
-      if (val) options.push(val);
-    }
-    const correctRaw = String(row[6] || '').trim();
-    if (!text || options.length < 2 || !correctRaw) {
-      skipped.push({ row: i + 1, reason: 'нет текста вопроса, вариантов (мин. 2) или правильного ответа' });
-      continue;
-    }
-    const correctNums = correctRaw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-    const correctIdxs = correctNums.map(n => n - 1).filter(idx => idx >= 0 && idx < options.length);
-    if (correctIdxs.length === 0) {
-      skipped.push({ row: i + 1, reason: 'номер правильного ответа не соответствует вариантам' });
-      continue;
-    }
-    const multi = correctIdxs.length > 1;
-    questions.push({ text, options, correct: multi ? correctIdxs : correctIdxs[0], multi });
-  }
-  if (questions.length === 0) {
-    return res.status(400).json({ error: 'Не удалось распознать ни одного вопроса. Проверьте формат файла (скачайте шаблон).', skipped });
-  }
-  res.json({ questions, skipped });
 });
 
 // ==================== ЛАБОРАТОРИИ ====================
@@ -856,7 +792,6 @@ io.on('connection', (socket) => {
 
 async function seedLabs() {
   await db.update((d) => {
-    // Сначала убеждаемся, что объект labs существует
     if (!d.labs) d.labs = {};
     SEED_LABS.forEach(l => { d.labs[l.id] = l; });
   });
