@@ -1,113 +1,58 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
-const GIST_FILENAME = 'db.json';
+const DATA_DIR = path.join(__dirname, 'data');
+const FILE_PATH = path.join(DATA_DIR, 'db.json');
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GIST_ID = process.env.GITHUB_GIST_ID;
-const USE_GIST = !!(GITHUB_TOKEN && GIST_ID);
-
-function defaultData() {
-  return { tests: {}, sessions: {}, labs: {} };
+// Инициализация папки данных
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function ensureShape(data) {
-  if (!data.tests) data.tests = {};
-  if (!data.sessions) data.sessions = {};
-  if (!data.labs) data.labs = {};
-  return data;
-}
-
-let cache = defaultData();
-let initialized = false;
-
-async function fetchFromGist() {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-    headers: {
-      'Authorization': `Bearer ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github+json'
-    }
-  });
-  if (!res.ok) throw new Error(`GitHub Gist: не удалось загрузить (HTTP ${res.status})`);
-  const json = await res.json();
-  const file = json.files && json.files[GIST_FILENAME];
-  if (!file || !file.content) return defaultData();
-  try {
-    return JSON.parse(file.content);
-  } catch {
-    return defaultData();
-  }
-}
-
-async function saveToGist(data) {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      files: { [GIST_FILENAME]: { content: JSON.stringify(data, null, 2) } }
-    })
-  });
-  if (!res.ok) throw new Error(`GitHub Gist: не удалось сохранить (HTTP ${res.status})`);
-}
-
-function loadLocal() {
-  if (!fs.existsSync(DB_PATH)) saveLocal(defaultData());
-  const raw = fs.readFileSync(DB_PATH, 'utf-8');
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultData();
-  }
-}
-
-function saveLocal(data) {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-async function initCache() {
-  if (initialized) return;
-  if (USE_GIST) {
-    try {
-      cache = await fetchFromGist();
-      console.log('[db] Постоянное хранилище: GitHub Gist — данные загружены');
-    } catch (e) {
-      console.error('[db] Не удалось загрузить данные из Gist, старт с пустой базой:', e.message);
-      cache = defaultData();
-    }
-  } else {
-    cache = loadLocal();
-    console.log('[db] Постоянное хранилище не настроено (GITHUB_TOKEN/GITHUB_GIST_ID отсутствуют) — используется локальный файл data/db.json');
-  }
-  cache = ensureShape(cache);
-  initialized = true;
-}
-
+// Загрузка данных
 function load() {
-  return cache;
-}
-
-let queue = Promise.resolve();
-function update(fn) {
-  queue = queue.then(async () => {
-    const result = fn(cache);
-    try {
-      if (USE_GIST) {
-        await saveToGist(cache);
-      } else {
-        saveLocal(cache);
-      }
-    } catch (e) {
-      console.error('[db] Ошибка сохранения:', e.message);
+  try {
+    if (!fs.existsSync(FILE_PATH)) {
+      // Структура по умолчанию для B2B
+      const defaultData = {
+        companies: {}, // { companyId: { email, passwordHash, name, plan: 'free'|'pro' } }
+        tests: {},     // { testId: { companyId, title, questions, createdAt } }
+        sessions: {},  // { sessionCode: { testId, companyId, ... } }
+        labs: {}       // лаборатории (без изменений)
+      };
+      fs.writeFileSync(FILE_PATH, JSON.stringify(defaultData, null, 2));
+      return defaultData;
     }
-    return result;
-  });
-  return queue;
+    const raw = fs.readFileSync(FILE_PATH, 'utf8');
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('[db] Ошибка загрузки:', e);
+    return {};
+  }
 }
 
-module.exports = { load, update, initCache };
+// Сохранение данных
+function save(data) {
+  try {
+    fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.error('[db] Ошибка сохранения:', e);
+  }
+}
+
+// Обновление данных с колбэком
+async function update(callback) {
+  const data = load();
+  const result = callback(data);
+  save(data);
+  return result;
+}
+
+// Инициализация кэша (для совместимости)
+async function initCache() {
+  // Загружаем один раз, создаём файл если нет
+  load();
+  return true;
+}
+
+module.exports = { load, save, update, initCache };
