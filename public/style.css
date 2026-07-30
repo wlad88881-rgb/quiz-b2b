@@ -259,4 +259,69 @@ th { color: #6b7c8f; font-weight: 600; }
   font-weight: 600;
   margin-bottom: 20px;
   border: 1px solid #d64545;
+/* === ТЕМНАЯ ТЕМА === */
+:root {
+  --bg-color: #f4f6f8;
+  --card-bg: #ffffff;
+  --text-color: #1a202c;
+  --primary: #3182ce;
+  --success: #38a169;
+  --error: #e53e3e;
+}
+
+body.dark-theme {
+  --bg-color: #1a202c;
+  --card-bg: #2d3748;
+  --text-color: #f7fafc;
+  --primary: #63b3ed;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.card, .container {
+  background-color: var(--card-bg);
+  transition: background-color 0.3s;
+}
+
+/* Кнопка переключения темы */
+.theme-toggle {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  background: var(--card-bg);
+  border: 1px solid var(--text-color);
+  color: var(--text-color);
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 1000;
+}
+
+/* === ВИЗУАЛЬНЫЕ ЭФФЕКТЫ === */
+@keyframes flashGreen {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(56, 161, 105, 0.3); }
+  100% { background-color: transparent; }
+}
+
+@keyframes shakeRed {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.answer-correct {
+  animation: flashGreen 0.5s ease-out;
+  border: 2px solid var(--success) !important;
+}
+
+.answer-wrong {
+  animation: shakeRed 0.4s ease-in-out;
+  border: 2px solid var(--error) !important;
+}
 }
