@@ -102,6 +102,70 @@
   };
 
   document.addEventListener('DOMContentLoaded', applyTranslations);
+// === ЗВУКОВЫЕ ЭФФЕКТЫ (Web Audio API) ===
+function playSound(type) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    if (type === 'correct') {
+      // Приятный высокий звук (успех)
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // Нота До
+      osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } else {
+      // Низкий звук (ошибка)
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    }
+  } catch (e) {
+    console.log('Audio not supported');
+  }
+}
+
+// === ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ПРИ ОТВЕТЕ ===
+function showAnswerFeedback(element, isCorrect) {
+  if (isCorrect) {
+    element.classList.add('answer-correct');
+    playSound('correct');
+  } else {
+    element.classList.add('answer-wrong');
+    playSound('wrong');
+  }
+  
+  // Убираем классы через 1 секунду
+  setTimeout(() => {
+    element.classList.remove('answer-correct', 'answer-wrong');
+  }, 1000);
+}
+
+// === ПРИМЕР ИСПОЛЬЗОВАНИЯ (интегрируйте это в вашу функцию отправки ответа) ===
+/*
+  // Когда студент выбирает ответ или нажимает "Проверить":
+  const answerElement = document.getElementById('question-block'); // ваш элемент
+  const isAnswerCorrect = /* ваша логика проверки */;
+  
+  showAnswerFeedback(answerElement, isAnswerCorrect);
+*/
+
+// === ТЕМНАЯ ТЕМА ДЛЯ СТУДЕНТА ===
+function initStudentTheme() {
+  const isDark = localStorage.getItem('theme') === 'dark';
+  if (isDark) document.body.classList.add('dark-theme');
+}
+document.addEventListener('DOMContentLoaded', initStudentTheme);
 </script>
 </body>
 </html>
