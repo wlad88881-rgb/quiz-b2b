@@ -2,52 +2,470 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Диагностический тренажёр</title>
-<link rel="stylesheet" href="/style.css">
-<link rel="stylesheet" href="/lab.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Тренажёр — диагностика</title>
+<style>
+  :root {
+    --navy: #2C3E50;
+    --orange: #F07C00;
+    --gray: #F4F4F4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  html, body { height: 100%; }
+  body {
+    background: var(--gray);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .wrap {
+    max-width: 640px;
+    width: 100%;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    padding: 24px;
+    margin-top: 20px;
+  }
+  .hidden { display: none !important; }
+  h1 { font-size: 20px; color: var(--navy); margin-bottom: 6px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 18px; }
+  .muted { color: #888; font-size: 13px; }
+
+  .lang-switch { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 14px; }
+  .lang-btn {
+    border: 1px solid #ddd; background: #fff; color: #555; padding: 5px 12px;
+    border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  .lang-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  input[type="text"] {
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+    font-size: 16px; margin-bottom: 12px;
+  }
+  .btn {
+    display: inline-block; background: var(--orange); color: #fff; border: none;
+    padding: 12px 20px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; width: 100%;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.outline { background: transparent; border: 1px solid #ddd; color: var(--navy); }
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-row .btn { width: auto; flex: 1; }
+
+  .error-box { background: #fdecea; color: #d64545; padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 12px; }
+  .info-box { background: #eef4fb; color: #2C3E50; padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 12px; }
+
+  .case-title { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 14px; }
+  .readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .reading-card {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+  .reading-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .reading-value { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+  .reading-desc { font-size: 12px; color: #666; line-height: 1.3; }
+  .reading-card.sound .reading-value { font-size: 15px; }
+
+  .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-bottom: 18px; }
+  .progress-fill { height: 100%; background: var(--orange); width: 0%; transition: width 0.25s; }
+
+  .dots { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; }
+  .dot {
+    width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; cursor: pointer; border: 1.5px solid #e5e5e5; color: #999; background: #fff;
+  }
+  .dot.answered { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .dot.current { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(240,124,0,0.25); }
+
+  .option {
+    display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+    border: 1.5px solid #e5e5e5; border-radius: 10px; margin-bottom: 10px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .option:hover { border-color: #ccc; }
+  .option.selected { border-color: var(--orange); background: #fff6ec; }
+  .option input { margin-top: 3px; flex-shrink: 0; width: 18px; height: 18px; cursor: pointer; }
+  .option .opt-text { font-size: 15px; color: #333; line-height: 1.4; }
+
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%; border: 8px solid var(--orange);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 10px auto 20px;
+  }
+  .score-circle .pct { font-size: 30px; font-weight: 800; color: var(--navy); }
+  .score-circle .frac { font-size: 13px; color: #888; }
+
+  .review-item { border: 1px solid #eee; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .review-item .rtitle { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+  .review-item .rreadings { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 10px; }
+  .review-item .rr { background: #fafbfc; border-radius: 8px; padding: 8px; font-size: 12px; }
+  .review-item .rr strong { display: block; font-size: 11px; color: #888; margin-bottom: 2px; }
+  .review-item .status { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 12px; display: inline-block; margin-bottom: 8px; }
+  .review-item .status.ok { background: #e6f4ea; color: #2e9e4f; }
+  .review-item .status.no { background: #fdecea; color: #d64545; }
+  .review-item .explain { font-size: 13px; color: #555; line-height: 1.5; background: #f4f8ff; padding: 10px; border-radius: 8px; margin-top: 8px; }
+
+  .center { text-align: center; }
+  .spinner {
+    width: 34px; height: 34px; border: 3px solid #eee; border-top-color: var(--orange);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 30px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
-<div class="brand-header">
-  <div class="brand-mark">ERG</div>
-  <div class="brand-text">
-    <div class="brand-title">ERG Corporate University</div>
-    <div class="brand-subtitle">Академия ТОиР — Диагностический тренажёр</div>
-  </div>
-</div>
-<div class="container narrow" id="app">
 
-  <div id="screen-join" class="center">
-    <h1 id="join-title">Тренажёр</h1>
-    <p class="muted" id="join-intro"></p>
-    <div class="card">
-      <label>Введите ваше имя и фамилию</label>
-      <input type="text" id="student-name" placeholder="Иванов Иван">
-      <button class="btn" style="margin-top:16px;width:100%" onclick="joinLab()">Начать обход</button>
-      <div class="error" id="join-error"></div>
+<div class="wrap">
+
+  <div id="screen-loading" class="center">
+    <div class="spinner"></div>
+    <div class="muted" id="loading-text">Загрузка...</div>
+  </div>
+
+  <div id="screen-error" class="hidden">
+    <h1 id="err-title">Не получилось</h1>
+    <div class="error-box" id="error-text"></div>
+  </div>
+
+  <div id="screen-join" class="hidden">
+    <div class="lang-switch">
+      <button class="lang-btn" id="lang-ru-1" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" id="lang-kk-1" onclick="setLang('kk')">KZ</button>
     </div>
+    <h1 id="join-title"></h1>
+    <div class="info-box" id="join-intro" style="font-size:13px;"></div>
+    <input type="text" id="student-name" maxlength="60">
+    <div class="error-box hidden" id="join-error"></div>
+    <button class="btn" id="join-btn" onclick="joinLab()"></button>
   </div>
 
-  <div id="screen-lab" style="display:none">
-    <h1 id="lab-title"></h1>
-    <div class="q-nav" id="case-nav"></div>
-    <div id="cases-list"></div>
-    <button class="btn" style="width:100%" onclick="submitLab()">Отправить диагнозы</button>
-    <div class="error" id="submit-error"></div>
-  </div>
-
-  <div id="screen-result" style="display:none">
-    <h1 class="center">Обход завершён</h1>
-    <div class="card center">
-      <p class="muted">Верных диагнозов:</p>
-      <div class="code-big" id="result-score"></div>
-      <p id="result-percent" class="muted"></p>
+  <div id="screen-quiz" class="hidden">
+    <div class="lang-switch">
+      <button class="lang-btn" id="lang-ru-2" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" id="lang-kk-2" onclick="setLang('kk')">KZ</button>
     </div>
-    <h2>Разбор случаев</h2>
-    <div id="review-list"></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="case-title" id="case-title"></div>
+    <div class="readings" id="readings-container"></div>
+    <div class="muted" style="margin-bottom:10px; font-weight:600; font-size:14px;">Выберите диагноз:</div>
+    <div id="options-container"></div>
+    <div class="dots" id="dots"></div>
+    <div class="btn-row">
+      <button class="btn outline" id="prev-btn" onclick="goPrev()"></button>
+      <button class="btn" id="next-btn" onclick="goNext()"></button>
+    </div>
+    <button class="btn" id="submit-btn" onclick="submitLab()" style="margin-top:10px; background:var(--navy);"></button>
+  </div>
+
+  <div id="screen-result" class="hidden">
+    <h1 style="text-align:center;"></h1>
+    <div class="score-circle">
+      <div class="pct" id="score-pct">0%</div>
+      <div class="frac" id="score-frac">0/0</div>
+    </div>
+    <h2 style="font-size:15px; color: var(--navy); margin: 18px 0 10px;">Разбор кейсов</h2>
+    <div id="review-container"></div>
   </div>
 
 </div>
-<script src="/lab-student.js"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const CODE = location.pathname.split('/').filter(Boolean).pop();
+
+  const SOUND_LABELS = {
+    grinding: 'Скрежет',
+    clicking: 'Щелчки',
+    hum_axial: 'Гул (осевой)',
+    hum_radial: 'Гул (радиальный)',
+    whistle: 'Свист',
+    knock: 'Стук',
+    other: 'Другое'
+  };
+
+  const UI = {
+    ru: {
+      loading: 'Загрузка...',
+      oops: 'Не получилось',
+      namePh: 'Введите ваше имя',
+      startBtn: 'Начать тренажёр',
+      prevBtn: '← Назад',
+      nextBtn: 'Далее →',
+      submitBtn: 'Завершить',
+      resultTitle: 'Результат',
+      enterName: 'Введите имя',
+      notFound: 'Сессия не найдена. Проверьте код или QR-код.',
+      testEnded: 'Тренажёр завершён преподавателем.',
+      correctLabel: 'Верно',
+      wrongLabel: 'Неверно',
+      yourAnswer: 'Ваш диагноз',
+      correctAnswer: 'Правильный диагноз',
+      explainLabel: 'Пояснение',
+      notAnswered: 'нет ответа',
+      soundLabel: 'Звук',
+      vibrationLabel: 'Вибрация',
+      tempLabel: 'Температура'
+    },
+    kk: {
+      loading: 'Жүктелуде...',
+      oops: 'Сәтсіз аяқталды',
+      namePh: 'Атыңызды енгізіңіз',
+      startBtn: 'Тренажёрді бастау',
+      prevBtn: '← Артқа',
+      nextBtn: 'Келесі →',
+      submitBtn: 'Аяқтау',
+      resultTitle: 'Нәтиже',
+      enterName: 'Атыңызды енгізіңіз',
+      notFound: 'Сессия табылмады. Кодты немесе QR-кодты тексеріңіз.',
+      testEnded: 'Тренажёр оқытушы тарапынан аяқталды.',
+      correctLabel: 'Дұрыс',
+      wrongLabel: 'Қате',
+      yourAnswer: 'Сіздің диагнозыңыз',
+      correctAnswer: 'Дұрыс диагноз',
+      explainLabel: 'Түсіндірме',
+      notAnswered: 'жауап жоқ',
+      soundLabel: 'Дыбыс',
+      vibrationLabel: 'Вибрация',
+      tempLabel: 'Температура'
+    }
+  };
+
+  const state = {
+    lang: 'ru',
+    participantId: null,
+    testTitle: '',
+    intro: '',
+    cases: [],
+    answers: [], // [faultId, ...]
+    currentIndex: 0
+  };
+
+  function t(key) { return UI[state.lang][key] || UI.ru[key] || key; }
+
+  function applyStaticUi() {
+    document.getElementById('student-name').placeholder = t('namePh');
+    document.getElementById('join-btn').textContent = t('startBtn');
+    document.getElementById('prev-btn').textContent = t('prevBtn');
+    document.getElementById('next-btn').textContent = t('nextBtn');
+    document.getElementById('submit-btn').textContent = t('submitBtn');
+    document.querySelector('#screen-result h1').textContent = t('resultTitle');
+    document.getElementById('err-title').textContent = t('oops');
+    document.getElementById('loading-text').textContent = t('loading');
+    ['lang-ru-1','lang-ru-2'].forEach(id => document.getElementById(id).classList.toggle('active', state.lang === 'ru'));
+    ['lang-kk-1','lang-kk-2'].forEach(id => document.getElementById(id).classList.toggle('active', state.lang === 'kk'));
+  }
+
+  function showScreen(id) {
+    ['screen-loading','screen-error','screen-join','screen-quiz','screen-result'].forEach(s => {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    showScreen('screen-error');
+  }
+
+  async function init() {
+    applyStaticUi();
+    try {
+      const res = await fetch(`/api/lab-sessions/${CODE}/info`);
+      const data = await res.json();
+      if (!res.ok) {
+        showError(res.status === 404 ? t('notFound') : (data.error || t('notFound')));
+        return;
+      }
+      if (data.ended) { showError(t('testEnded')); return; }
+      state.testTitle = data.testTitle;
+      state.intro = data.intro || '';
+      document.getElementById('join-title').textContent = data.testTitle;
+      document.getElementById('join-intro').textContent = state.intro;
+      showScreen('screen-join');
+    } catch (e) {
+      showError(t('notFound'));
+    }
+  }
+
+  function setLang(lang) {
+    state.lang = lang;
+    applyStaticUi();
+    if (!document.getElementById('screen-quiz').classList.contains('hidden')) renderCase();
+  }
+
+  async function joinLab() {
+    const name = document.getElementById('student-name').value.trim();
+    const errEl = document.getElementById('join-error');
+    errEl.classList.add('hidden');
+    if (!name) { errEl.textContent = t('enterName'); errEl.classList.remove('hidden'); return; }
+    const btn = document.getElementById('join-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/lab-sessions/${CODE}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || t('notFound'); errEl.classList.remove('hidden'); btn.disabled = false; return; }
+      state.participantId = data.participantId;
+      state.testTitle = data.testTitle;
+      state.cases = data.cases;
+      state.answers = new Array(state.cases.length).fill(undefined);
+      state.currentIndex = 0;
+      showScreen('screen-quiz');
+      renderCase();
+    } catch (e) {
+      errEl.textContent = t('notFound'); errEl.classList.remove('hidden'); btn.disabled = false;
+    }
+  }
+
+  function renderCase() {
+    const idx = state.currentIndex;
+    const total = state.cases.length;
+    const c = state.cases[idx];
+
+    document.getElementById('case-title').textContent = `${idx + 1}. ${c.title}`;
+
+    // Показания
+    const readings = document.getElementById('readings-container');
+    readings.innerHTML = `
+      <div class="reading-card">
+        <div class="reading-label">${t('vibrationLabel')}</div>
+        <div class="reading-value">${escapeHtml(c.vibration.value)}</div>
+        <div class="reading-desc">${escapeHtml(c.vibration.desc)}</div>
+      </div>
+      <div class="reading-card">
+        <div class="reading-label">${t('tempLabel')}</div>
+        <div class="reading-value">${escapeHtml(c.temp.value)}</div>
+        <div class="reading-desc">${escapeHtml(c.temp.desc)}</div>
+      </div>
+      <div class="reading-card sound">
+        <div class="reading-label">${t('soundLabel')}</div>
+        <div class="reading-value">${SOUND_LABELS[c.sound.type] || c.sound.type}</div>
+        <div class="reading-desc">${escapeHtml(c.sound.desc)}</div>
+      </div>
+    `;
+
+    // Опции
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    const given = state.answers[idx];
+    c.options.forEach((opt) => {
+      const isSelected = given === opt.id;
+      const div = document.createElement('div');
+      div.className = 'option' + (isSelected ? ' selected' : '');
+      div.onclick = () => selectOption(opt.id);
+      div.innerHTML = `
+        <input type="radio" name="case-opt" ${isSelected ? 'checked' : ''} readonly>
+        <div class="opt-text">${escapeHtml(opt.label)}</div>
+      `;
+      container.appendChild(div);
+    });
+
+    // Точки
+    const dots = document.getElementById('dots');
+    dots.innerHTML = '';
+    state.cases.forEach((_, i) => {
+      const answered = state.answers[i] !== undefined;
+      const d = document.createElement('div');
+      d.className = 'dot' + (answered ? ' answered' : '') + (i === idx ? ' current' : '');
+      d.textContent = i + 1;
+      d.onclick = () => { state.currentIndex = i; renderCase(); };
+      dots.appendChild(d);
+    });
+
+    const answeredCount = state.answers.filter(a => a !== undefined).length;
+    document.getElementById('progress-fill').style.width = Math.round((answeredCount / total) * 100) + '%';
+
+    document.getElementById('prev-btn').style.visibility = idx === 0 ? 'hidden' : 'visible';
+    const isLast = idx === total - 1;
+    document.getElementById('next-btn').classList.toggle('hidden', isLast);
+    document.getElementById('submit-btn').classList.toggle('hidden', !isLast);
+  }
+
+  function selectOption(faultId) {
+    state.answers[state.currentIndex] = faultId;
+    renderCase();
+  }
+
+  function goNext() {
+    if (state.currentIndex < state.cases.length - 1) {
+      state.currentIndex++;
+      renderCase();
+    }
+  }
+  function goPrev() {
+    if (state.currentIndex > 0) {
+      state.currentIndex--;
+      renderCase();
+    }
+  }
+
+  let lastResult = null;
+
+  async function submitLab() {
+    document.getElementById('submit-btn').disabled = true;
+    try {
+      const res = await fetch(`/api/lab-sessions/${CODE}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId: state.participantId, answers: state.answers })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(data.error || t('notFound')); return; }
+      lastResult = data;
+      showResult();
+    } catch (e) {
+      showError(t('notFound'));
+    }
+  }
+
+  function showResult() {
+    showScreen('screen-result');
+    const pct = lastResult.total ? Math.round((lastResult.score / lastResult.total) * 100) : 0;
+    document.getElementById('score-pct').textContent = pct + '%';
+    document.getElementById('score-frac').textContent = `${lastResult.score}/${lastResult.total}`;
+
+    const container = document.getElementById('review-container');
+    container.innerHTML = '';
+    lastResult.review.forEach((r, i) => {
+      const div = document.createElement('div');
+      div.className = 'review-item';
+      const statusClass = r.isCorrect ? 'ok' : 'no';
+      const statusText = r.isCorrect ? t('correctLabel') : t('wrongLabel');
+      const givenLabel = r.given ? (r.options.find(o => o.id === r.given)?.label || r.given) : t('notAnswered');
+
+      div.innerHTML = `
+        <span class="status ${statusClass}">${statusText}</span>
+        <div class="rtitle">${i + 1}. ${escapeHtml(r.title)}</div>
+        <div class="rreadings">
+          <div class="rr"><strong>${t('vibrationLabel')}</strong>${escapeHtml(r.vibration.value)} — ${escapeHtml(r.vibration.desc)}</div>
+          <div class="rr"><strong>${t('tempLabel')}</strong>${escapeHtml(r.temp.value)} — ${escapeHtml(r.temp.desc)}</div>
+          <div class="rr"><strong>${t('soundLabel')}</strong>${SOUND_LABELS[r.sound.type] || r.sound.type} — ${escapeHtml(r.sound.desc)}</div>
+        </div>
+        <div style="font-size:13px; margin-bottom:4px;"><strong>${t('yourAnswer')}:</strong> ${escapeHtml(givenLabel)}</div>
+        ${!r.isCorrect ? `<div style="font-size:13px; margin-bottom:4px; color:#2e9e4f;"><strong>${t('correctAnswer')}:</strong> ${escapeHtml(r.correctLabel)}</div>` : ''}
+        <div class="explain"><strong>${t('explainLabel')}:</strong> ${escapeHtml(r.explain)}</div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // Socket — завершение сессии преподавателем
+  const socket = io();
+  socket.on('session:ended', () => {
+    if (!document.getElementById('screen-result').classList.contains('hidden')) return;
+    showError(t('testEnded'));
+  });
+
+  function escapeHtml(s) {
+    return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  init();
+</script>
 </body>
 </html>
